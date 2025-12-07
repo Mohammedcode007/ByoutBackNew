@@ -10,15 +10,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Mohammedcode007/backEndByout.git"
+    "url": "git+https://github.com/Mohammedcode007/ByoutBackNew.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Mohammedcode007/backEndByout/issues"
+    "url": "https://github.com/Mohammedcode007/ByoutBackNew/issues"
   },
-  "homepage": "https://github.com/Mohammedcode007/backEndByout#readme",
+  "homepage": "https://github.com/Mohammedcode007/ByoutBackNew#readme",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
