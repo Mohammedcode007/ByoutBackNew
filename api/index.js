@@ -32,8 +32,24 @@ app.use("/api/notifications", notificationRoutes);
 // Error middleware
 app.use(errorHandler);
 
-// Connect MongoDB
-connectDB()
+// MongoDB connection caching (Serverless-friendly)
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function dbConnect() {
+  if (cached.conn) return cached.conn;
+  if (!cached.promise) {
+    cached.promise = connectDB(process.env.MONGO_URI).then((mongoose) => mongoose);
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
+
+// Connect DB on cold start
+dbConnect()
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("Failed to connect to MongoDB:", err));
 
