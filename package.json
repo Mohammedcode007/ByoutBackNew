@@ -2,12 +2,11 @@
   "name": "backendbyout",
   "version": "1.0.0",
   "description": "",
-    "type": "module",
 
   "main": "index.js",
   "scripts": {
-  "dev": "nodemon api/app.js",
-    "start": "node api/app.js",
+  "dev": "nodemon server.js",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
