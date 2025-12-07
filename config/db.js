@@ -12,7 +12,7 @@
 
 // module.exports = connectDB;
 
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 let cached = global.mongoose;
 
@@ -20,18 +20,18 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-const connectDB = async () => {
+async function connectDB() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    }).then((mongoose) => mongoose);
+    cached.promise = mongoose.connect(process.env.MONGO_URI)
+      .then((mongoose) => {
+        return mongoose;
+      });
   }
 
   cached.conn = await cached.promise;
   return cached.conn;
-};
+}
 
-module.exports = connectDB;
+export default connectDB;
