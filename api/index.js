@@ -1,5 +1,4 @@
 import express from "express";
-import serverless from "serverless-http";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -34,10 +33,7 @@ app.use(errorHandler);
 
 // MongoDB connection caching (Serverless-friendly)
 let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
 
 async function dbConnect() {
   if (cached.conn) return cached.conn;
@@ -53,4 +49,4 @@ dbConnect()
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("Failed to connect to MongoDB:", err));
 
-export const handler = serverless(app);
+export default app;
