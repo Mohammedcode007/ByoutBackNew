@@ -20,5 +20,6 @@ router.route('/:id')
   .get(protect, isAdmin, getUserById)
   .put(protect, isAdmin, updateUser)
   .delete(protect, isAdmin, deleteUser);
+router.post('/save-device-token', protect, saveDeviceToken);
 
 module.exports = router;

@@ -142,6 +142,44 @@ const deleteUser = async (req, res, next) => {
 };
 
 // ==========================
+// حفظ Device Token للمستخدم الحالي
+// ==========================
+const saveDeviceToken = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { deviceToken } = req.body;
+
+    if (!deviceToken) {
+      return res.status(400).json({ message: 'deviceToken مطلوب' });
+    }
+
+    console.log('📱 حفظ Device Token:', {
+      userId,
+      token: deviceToken
+    });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { deviceToken },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    res.json({
+      success: true,
+      message: 'تم حفظ Device Token بنجاح',
+      deviceToken
+    });
+  } catch (error) {
+    console.error('❌ خطأ في saveDeviceToken:', error);
+    res.status(500).json({ message: 'حدث خطأ أثناء حفظ التوكن' });
+  }
+};
+
+// ==========================
 // تصدير الكونترولر
 // ==========================
 module.exports = {
@@ -149,5 +187,6 @@ module.exports = {
   getAllUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  saveDeviceToken
 };

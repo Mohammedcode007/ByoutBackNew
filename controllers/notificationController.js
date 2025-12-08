@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const admin = require('firebase-admin');
+const { sendPushNotification } = require('../services/notificationsService'); // المسار حسب مشروعك
 
 /**
  * إرسال إشعار لمستخدمين محددين
@@ -9,23 +10,8 @@ const admin = require('firebase-admin');
  */
 
 
-const sendPushNotification = async (tokens, title, message) => {
-  if (!tokens.length) return;
 
-  const payload = {
-    notification: { title, body: message },
-    data: { type: 'notification' }
-  };
 
-  try {
-    const response = await admin.messaging().sendToDevice(tokens, payload);
-    console.log('Push Notification sent:', response);
-  } catch (err) {
-    console.error('Push Notification Error:', err);
-  }
-};
-
-// ===================== إرسال إشعار =====================
 const sendNotification = async (req, res) => {
   try {
     const { title, message, recipientIds, relatedItemId } = req.body;
@@ -39,7 +25,7 @@ const sendNotification = async (req, res) => {
       return res.status(400).json({ message: 'يرجى تقديم العنوان، الرسالة والمستلمين' });
     }
 
-    // حفظ الإشعار داخليًا في قاعدة البيانات
+    // حفظ الإخطار داخل DB
     const notification = await Notification.create({
       title,
       message,
@@ -47,48 +33,45 @@ const sendNotification = async (req, res) => {
       relatedItem: relatedItemId || null
     });
 
-    // جلب Device Tokens للمستلمين
+    // جلب المستخدمين والتوكنات
     const users = await User.find({ _id: { $in: recipientIds } });
-    const tokens = users.map(u => u.deviceToken).filter(t => t); // deviceToken يجب تخزينه عند تسجيل المستخدم
+    const tokens = users.map(u => u.deviceToken).filter(t => t);
 
-    // إرسال Push Notification لكل الأجهزة
-    await sendPushNotification(tokens, title, message);
+    console.log('👥 عدد المستخدمين المجلوبين:', users.length);
+    users.forEach(u => console.log(` - user ${u._id} token: ${u.deviceToken || '❌ لا يوجد'}`));
 
-    res.status(201).json({ success: true, notification });
+    // إرسال عبر Expo
+    const results = await sendPushNotification(tokens, title, message, { notificationId: notification._id?.toString() });
+
+    // تنظيف التوكنات غير الصالحة من DB
+    // افحص الأخطاء وابحث عن رسائل خطأ نموذجية مثل "DeviceNotRegistered" أو "InvalidCredentials" أو "ExpoPushToken[xxxxxxxx] is not a registered push notification recipient"
+    const invalidTokens = new Set();
+    results.failures.forEach(f => {
+      const token = f.token;
+      const r = f.result;
+      // حالات شائعة: r.details?.error, r.message, r.length > 0...
+      // سنبحث نصيًا عن دلائل على أن التوكن غير صالح
+      const msg = JSON.stringify(r).toLowerCase();
+      if (msg.includes('not registered') || msg.includes('device not registered') || msg.includes('invalid') || msg.includes('unknown token')) {
+        invalidTokens.add(token);
+      }
+    });
+
+    if (invalidTokens.size) {
+      console.log('🧹 إزالة التوكنات غير الصالحة من المستخدمين:', Array.from(invalidTokens));
+      await User.updateMany(
+        { deviceToken: { $in: Array.from(invalidTokens) } },
+        { $unset: { deviceToken: "" } }
+      );
+    }
+
+    res.status(201).json({ success: true, notification, resultsSummary: { sent: results.success.length, failed: results.failures.length } });
   } catch (error) {
-    console.error(error);
+    console.error('❌ sendNotification error:', error);
     res.status(500).json({ message: 'حدث خطأ أثناء إرسال الإشعار' });
   }
 };
 
-
-// const sendNotification = async (req, res) => {
-//   try {
-//     const { title, message, recipientIds, relatedItemId } = req.body;
-
-//     // تحقق من صلاحية المستخدم
-//     const currentUser = req.user; // افترض أنك تستخدم protect middleware وتضيف user للـ req
-//     if (!currentUser || !['admin', 'owner'].includes(currentUser.role)) {
-//       return res.status(403).json({ message: 'ليس لديك صلاحية إرسال الإشعارات' });
-//     }
-
-//     if (!title || !message || !recipientIds || !recipientIds.length) {
-//       return res.status(400).json({ message: 'يرجى تقديم العنوان، الرسالة والمستلمين' });
-//     }
-
-//     const notification = await Notification.create({
-//       title,
-//       message,
-//       recipients: recipientIds,
-//       relatedItem: relatedItemId || null
-//     });
-
-//     res.status(201).json({ success: true, notification });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'حدث خطأ أثناء إرسال الإشعار' });
-//   }
-// };
 
 /**
  * عرض كل الإشعارات (admin/owner)
